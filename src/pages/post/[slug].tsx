@@ -1,12 +1,18 @@
+/* eslint-disable @typescript-eslint/explicit-module-boundary-types */
 import { GetStaticPaths, GetStaticProps } from 'next';
 
 import Prismic from '@prismicio/client';
 import { RichText } from 'prismic-dom';
-import Head from 'next/head';
 import { BsCalendarEvent, BsClock } from 'react-icons/bs';
 import { BiUser } from 'react-icons/bi';
+import { format } from 'date-fns';
+import ptBR from 'date-fns/locale/pt-BR';
+import { useRouter } from 'next/router';
+import Head from 'next/head';
+import commonStyles from '../../styles/common.module.scss';
 import { getPrismicClient } from '../../services/prismic';
 import styles from './post.module.scss';
+import Header from '../../components/Header';
 
 interface Post {
   first_publication_date: string | null;
@@ -29,23 +35,65 @@ interface PostProps {
   post: Post;
 }
 
+// eslint-disable-next-line @typescript-eslint/explicit-function-return-type
 export default function Post({ post }: PostProps) {
+  const router = useRouter();
+
+  // If the page is not yet generated, this will be displayed
+  // initially until getStaticProps() finishes running
+  if (router.isFallback) {
+    return <div>Carregando...</div>;
+  }
+
+  // eslint-disable-next-line @typescript-eslint/explicit-function-return-type
+  function readingTime() {
+    if (router.isFallback) {
+      return 0;
+    }
+
+    const totalWords = post.data.content.reduce((accWords, postContent) => {
+      let postHeading = 0;
+      let postBody = 0;
+
+      if (postContent.heading) {
+        postHeading = postContent.heading.trim().split(/\s+/).length;
+      }
+
+      if (RichText.asText(postContent.body)) {
+        postBody = RichText.asText(postContent.body).trim().split(/\s+/).length;
+      }
+
+      return accWords + postHeading + postBody;
+    }, 0);
+
+    const wordsPerMinute = 200;
+
+    return Math.ceil(totalWords / wordsPerMinute);
+  }
+
   // TODO:
   return (
-    <>
+    <main>
+      <Head>
+        <title>{post.data.title} | spacetraveling.</title>
+      </Head>
+      <Header />
       <img
         src={post.data.banner.url}
         alt="Banner principal"
         className={styles.banner}
       />
-      <main className={styles.post}>
-        <div>
-          <section>
-            <h1> {post.data.title} </h1>
-          </section>
+      <section className={commonStyles.containerContent}>
+        <div className={styles.post}>
+          <h1> {post.data.title} </h1>
           <div className={styles.dateAndAuthor}>
             <section>
-              <BsCalendarEvent /> {post.first_publication_date}{' '}
+              <BsCalendarEvent />
+              <time>
+                {format(new Date(post.first_publication_date), 'd MMM yyy', {
+                  locale: ptBR,
+                })}
+              </time>
             </section>
             <section>
               <BiUser />
@@ -53,16 +101,27 @@ export default function Post({ post }: PostProps) {
             </section>
             <section>
               <BsClock />
-              4min
+              {readingTime()} min
             </section>
           </div>
-          <div
-            className={styles.contentBody}
-            dangerouslySetInnerHTML={{ __html: post.data.content.body.text }}
-          />
+          <div className={styles.contentBody}>
+            {post.data.content.map(postContent => {
+              return (
+                <div key={postContent.heading} className={styles.postContent}>
+                  <h2>{postContent.heading}</h2>
+                  <article
+                    // eslint-disable-next-line react/no-danger
+                    dangerouslySetInnerHTML={{
+                      __html: RichText.asHtml(postContent.body),
+                    }}
+                  />
+                </div>
+              );
+            })}
+          </div>
         </div>
-      </main>
-    </>
+      </section>
+    </main>
   );
 }
 
@@ -71,19 +130,21 @@ export const getStaticPaths: GetStaticPaths = async () => {
   const posts = await prismic.query(
     [Prismic.predicates.at('document.type', 'post')],
     {
-      fetch: ['post.title', 'post.subtitle', 'post.author', 'post.content'],
-      pageSize: 10,
+      fetch: ['post.title', 'post.subtitle', 'post.author'],
+      pageSize: 2,
     }
   );
 
+  const paths = posts.results.map(post => {
+    return {
+      params: { slug: post.uid },
+    };
+  });
+
   // TODO:
   return {
-    paths: [
-      {
-        params: { slug: 'construindo-app-com-mapa-usando-react-native-maps-e' },
-      },
-    ],
-    fallback: 'blocking',
+    paths,
+    fallback: true,
   };
 };
 
@@ -92,31 +153,10 @@ export const getStaticProps: GetStaticProps = async context => {
   const { slug } = context.params;
   const response = await prismic.getByUID('post', String(slug), {});
 
-  // console.log(JSON.stringify(response, null, 2));
-  const post = {
-    first_publication_date: new Date(
-      response.first_publication_date
-    ).toLocaleDateString('pt-BR', {
-      day: '2-digit',
-      month: 'long',
-      year: 'numeric',
-    }),
-    data: {
-      title: response.data.title,
-      banner: {
-        url: response.data.banner.url,
-      },
-      author: response.data.author,
-      content: {
-        heading: response.data.content[0].heading,
-        body: {
-          text: RichText.asHtml(response.data.content[0].body),
-        },
-      },
-    },
-  };
-
   return {
-    props: { post },
+    props: {
+      post: response,
+    },
+    revalidate: 60 * 60 * 24, // 24h = second * minute * hour
   };
 };

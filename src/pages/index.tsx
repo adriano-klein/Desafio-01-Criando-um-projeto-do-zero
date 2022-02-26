@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/explicit-function-return-type */
 import { BsCalendarEvent } from 'react-icons/bs';
 import { BiUser } from 'react-icons/bi';
 import Head from 'next/head';
@@ -12,6 +13,7 @@ import { getPrismicClient } from '../services/prismic';
 
 import commonStyles from '../styles/common.module.scss';
 import styles from './home.module.scss';
+import Header from '../components/Header';
 
 interface Post {
   uid?: string;
@@ -24,7 +26,7 @@ interface Post {
 }
 
 interface PostPagination {
-  nextPage: string;
+  next_page: string;
   results: Post[];
 }
 
@@ -32,10 +34,11 @@ interface HomeProps {
   postsPagination: PostPagination;
 }
 
+// eslint-disable-next-line @typescript-eslint/explicit-module-boundary-types
 export default function Home({ postsPagination }: HomeProps) {
   const [posts, setPosts] = useState<Post[]>(postsPagination.results);
   const [pagination, setPagination] = useState<string>(
-    postsPagination.nextPage
+    postsPagination.next_page
   );
 
   // eslint-disable-next-line @typescript-eslint/explicit-function-return-type
@@ -67,12 +70,13 @@ export default function Home({ postsPagination }: HomeProps) {
         <title>Home | spacetraveling.</title>
       </Head>
 
-      <main>
+      <section className={commonStyles.containerContent}>
+        <Header />
         <div className={styles.post}>
           {posts.map((post: Post) => {
             return (
-              <>
-                <Link href={`/post/${String(post.uid)}`}>
+              <div key={post.uid}>
+                <Link key={post.uid} href={`/post/${String(post.uid)}`}>
                   <a>
                     <h1> {post.data.title} </h1>
                   </a>
@@ -96,21 +100,23 @@ export default function Home({ postsPagination }: HomeProps) {
                     <span> {post.data.author} </span>
                   </div>
                 </div>
-              </>
+              </div>
             );
           })}
-          <button type="button" onClick={() => loadNewPosts(pagination)}>
-            Carregar mais
-          </button>
+          {pagination ? (
+            <button type="button" onClick={() => loadNewPosts(pagination)}>
+              Carregar mais posts
+            </button>
+          ) : null}
         </div>
-      </main>
+      </section>
     </>
   );
 }
 
 export const getStaticProps = async () => {
   const prismic = getPrismicClient();
-  const postsResponse = await prismic.query(
+  const response = await prismic.query(
     [Prismic.predicates.at('document.type', 'post')],
     {
       fetch: ['post.title', 'post.subtitle', 'post.author', 'post.content'],
@@ -119,7 +125,7 @@ export const getStaticProps = async () => {
   );
 
   // TODO:
-  const posts = postsResponse.results.map(post => {
+  const posts = response.results.map(post => {
     return {
       uid: post.uid,
       first_publication_date: post.first_publication_date,
@@ -134,7 +140,7 @@ export const getStaticProps = async () => {
   return {
     props: {
       postsPagination: {
-        nextPage: postsResponse.next_page,
+        next_page: response.next_page,
         results: posts,
       },
     },
