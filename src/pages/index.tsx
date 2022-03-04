@@ -9,6 +9,7 @@ import ptBR from 'date-fns/locale/pt-BR';
 import Link from 'next/link';
 import { useState } from 'react';
 
+import { GetStaticProps } from 'next';
 import { getPrismicClient } from '../services/prismic';
 
 import commonStyles from '../styles/common.module.scss';
@@ -32,10 +33,12 @@ interface PostPagination {
 
 interface HomeProps {
   postsPagination: PostPagination;
+  preview: boolean;
 }
 
 // eslint-disable-next-line @typescript-eslint/explicit-module-boundary-types
-export default function Home({ postsPagination }: HomeProps) {
+export default function Home({ postsPagination, preview }: HomeProps) {
+  console.log(preview);
   const [posts, setPosts] = useState<Post[]>(postsPagination.results);
   const [pagination, setPagination] = useState<string>(
     postsPagination.next_page
@@ -108,19 +111,32 @@ export default function Home({ postsPagination }: HomeProps) {
               Carregar mais posts
             </button>
           ) : null}
+
+          {preview && (
+            <aside>
+              <Link href="/api/exit-preview">
+                <a>Sair do modo Preview</a>
+              </Link>
+            </aside>
+          )}
         </div>
       </section>
     </>
   );
 }
 
-export const getStaticProps = async () => {
+// eslint-disable-next-line @typescript-eslint/explicit-module-boundary-types
+export const getStaticProps: GetStaticProps<HomeProps> = async ({
+  preview = false,
+  previewData,
+}) => {
   const prismic = getPrismicClient();
   const response = await prismic.query(
     [Prismic.predicates.at('document.type', 'post')],
     {
       fetch: ['post.title', 'post.subtitle', 'post.author', 'post.content'],
       pageSize: 2,
+      ref: previewData?.ref ?? null,
     }
   );
 
@@ -143,6 +159,7 @@ export const getStaticProps = async () => {
         next_page: response.next_page,
         results: posts,
       },
+      preview,
     },
   };
 };

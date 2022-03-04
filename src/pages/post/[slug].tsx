@@ -9,6 +9,7 @@ import { format } from 'date-fns';
 import ptBR from 'date-fns/locale/pt-BR';
 import { useRouter } from 'next/router';
 import Head from 'next/head';
+import Link from 'next/link';
 import commonStyles from '../../styles/common.module.scss';
 import { getPrismicClient } from '../../services/prismic';
 import styles from './post.module.scss';
@@ -39,6 +40,7 @@ interface PostProps {
 // eslint-disable-next-line @typescript-eslint/explicit-function-return-type
 export default function Post({ post }: PostProps) {
   const router = useRouter();
+  console.log(JSON.stringify(post, null, 2));
 
   // If the page is not yet generated, this will be displayed
   // initially until getStaticProps() finishes running
@@ -68,7 +70,6 @@ export default function Post({ post }: PostProps) {
     }, 0);
 
     const wordsPerMinute = 200;
-
     return Math.ceil(totalWords / wordsPerMinute);
   }
 
@@ -76,6 +77,11 @@ export default function Post({ post }: PostProps) {
   return (
     <main>
       <Head>
+        <script
+          async
+          defer
+          src="https://static.cdn.prismic.io/prismic.js?new=true&repo=spacetraveling2022v1"
+        />
         <title>{post.data.title} | spacetraveling.</title>
       </Head>
       <Header />
@@ -116,6 +122,20 @@ export default function Post({ post }: PostProps) {
                       __html: RichText.asHtml(postContent.body),
                     }}
                   />
+                  <div>
+                    <div className={styles.previousAndNext}>
+                      <button type="button">
+                        <Link href="/">
+                          <a>Post anterior</a>
+                        </Link>
+                      </button>
+                      <button type="button">
+                        <Link href="/">
+                          <a>Próximo post</a>
+                        </Link>
+                      </button>
+                    </div>
+                  </div>
                 </div>
               );
             })}
@@ -154,6 +174,15 @@ export const getStaticProps: GetStaticProps = async context => {
   const prismic = getPrismicClient();
   const { slug } = context.params;
   const response = await prismic.getByUID('post', String(slug), {});
+
+  // Buscar todos os posts para pegar os nomes e links de cada um
+  const allPosts = await prismic.query(
+    [Prismic.predicates.at('document.type', 'post')],
+    {
+      fetch: ['post.title', 'post.subtitle', 'post.author', 'post.content'],
+      pageSize: 2,
+    }
+  );
 
   return {
     props: {

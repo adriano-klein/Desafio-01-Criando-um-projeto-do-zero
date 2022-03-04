@@ -65,4 +65,20 @@
     color: var(--highlight)
   }
 
+  .previousAndNext{
+    display: flex;
+    justify-content: space-between;
+    margin-top: 1rem;
+    border-top: 1px solid #ffffff;
+
+    button{
+      padding: 0.4rem;
+      border-radius: 0.3rem;
+      border: 1px solid #ffffff;
+      background-color: var(--background);
+      margin-top: 1rem;
+      margin-bottom: 2rem;
+    }
+  }
+
 }
