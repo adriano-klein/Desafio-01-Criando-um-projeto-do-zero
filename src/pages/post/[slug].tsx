@@ -40,7 +40,6 @@ interface PostProps {
 // eslint-disable-next-line @typescript-eslint/explicit-function-return-type
 export default function Post({ post }: PostProps) {
   const router = useRouter();
-  console.log(JSON.stringify(post, null, 2));
 
   // If the page is not yet generated, this will be displayed
   // initially until getStaticProps() finishes running
