@@ -38,7 +38,6 @@ interface HomeProps {
 
 // eslint-disable-next-line @typescript-eslint/explicit-module-boundary-types
 export default function Home({ postsPagination, preview }: HomeProps) {
-  console.log(preview);
   const [posts, setPosts] = useState<Post[]>(postsPagination.results);
   const [pagination, setPagination] = useState<string>(
     postsPagination.next_page

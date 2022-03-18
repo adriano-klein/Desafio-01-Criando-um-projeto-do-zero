@@ -5,7 +5,7 @@ import Prismic from '@prismicio/client';
 import { RichText } from 'prismic-dom';
 import { BsCalendarEvent, BsClock } from 'react-icons/bs';
 import { BiUser } from 'react-icons/bi';
-import { format } from 'date-fns';
+import { format, getHours, getMinutes } from 'date-fns';
 import ptBR from 'date-fns/locale/pt-BR';
 import { useRouter } from 'next/router';
 import Head from 'next/head';
@@ -18,6 +18,8 @@ import Comments from '../../components/Comments';
 
 interface Post {
   first_publication_date: string | null;
+  last_publication_date: string | null;
+  uid: string;
   data: {
     title: string;
     banner: {
@@ -35,10 +37,12 @@ interface Post {
 
 interface PostProps {
   post: Post;
+  prevPost: Post;
+  nextPost: Post;
 }
 
 // eslint-disable-next-line @typescript-eslint/explicit-function-return-type
-export default function Post({ post }: PostProps) {
+export default function Post({ post, prevPost, nextPost }: PostProps) {
   const router = useRouter();
 
   // If the page is not yet generated, this will be displayed
@@ -93,22 +97,33 @@ export default function Post({ post }: PostProps) {
         <div className={styles.post}>
           <h1> {post.data.title} </h1>
           <div className={styles.dateAndAuthor}>
-            <section>
+            <div>
               <BsCalendarEvent />
               <time>
                 {format(new Date(post.first_publication_date), 'd MMM yyy', {
                   locale: ptBR,
                 })}
               </time>
-            </section>
-            <section>
+            </div>
+
+            <div>
               <BiUser />
               {post.data.author}
-            </section>
+            </div>
             <section>
               <BsClock />
               {readingTime()} min
             </section>
+          </div>
+          <div className={styles.editedAt}>
+            <p>
+              *Editado em
+              {format(new Date(post.last_publication_date), 'd MMM yyy', {
+                locale: ptBR,
+              })}
+              , às {getHours(new Date(post.last_publication_date))}:
+              {getMinutes(new Date(post.last_publication_date))}
+            </p>
           </div>
           <div className={styles.contentBody}>
             {post.data.content.map(postContent => {
@@ -123,16 +138,35 @@ export default function Post({ post }: PostProps) {
                   />
                   <div>
                     <div className={styles.previousAndNext}>
-                      <button type="button">
-                        <Link href="/">
-                          <a>Post anterior</a>
-                        </Link>
-                      </button>
-                      <button type="button">
-                        <Link href="/">
-                          <a>Próximo post</a>
-                        </Link>
-                      </button>
+                      <div>
+                        {prevPost ? (
+                          <>
+                            <p className={styles.title}>
+                              {prevPost.data.title}
+                            </p>
+                            <Link
+                              href={`http://localhost:3000/post/${prevPost.uid}`}
+                            >
+                              <a>Post anterior</a>
+                            </Link>
+                          </>
+                        ) : null}
+                      </div>
+
+                      <div>
+                        {nextPost ? (
+                          <>
+                            <p className={styles.title}>
+                              {nextPost.data.title}
+                            </p>
+                            <Link
+                              href={`http://localhost:3000/post/${nextPost.uid}`}
+                            >
+                              <a>Próximo post</a>
+                            </Link>
+                          </>
+                        ) : null}
+                      </div>
                     </div>
                   </div>
                 </div>
@@ -152,7 +186,6 @@ export const getStaticPaths: GetStaticPaths = async () => {
     [Prismic.predicates.at('document.type', 'post')],
     {
       fetch: ['post.title', 'post.subtitle', 'post.author'],
-      pageSize: 2,
     }
   );
 
@@ -174,18 +207,32 @@ export const getStaticProps: GetStaticProps = async context => {
   const { slug } = context.params;
   const response = await prismic.getByUID('post', String(slug), {});
 
-  // Buscar todos os posts para pegar os nomes e links de cada um
-  const allPosts = await prismic.query(
-    [Prismic.predicates.at('document.type', 'post')],
+  const nextResponse = await prismic.query(
+    Prismic.Predicates.at('document.type', 'post'),
     {
-      fetch: ['post.title', 'post.subtitle', 'post.author', 'post.content'],
-      pageSize: 2,
+      pageSize: 1,
+      after: response?.id,
+      orderings: '[document.first_publication_date desc]',
     }
   );
+
+  const prevResponse = await prismic.query(
+    Prismic.Predicates.at('document.type', 'post'),
+    {
+      pageSize: 1,
+      after: response?.id,
+      orderings: '[document.first_publication_date]',
+    }
+  );
+
+  const nextPost = nextResponse?.results[0] || null;
+  const prevPost = prevResponse?.results[0] || null;
 
   return {
     props: {
       post: response,
+      prevPost,
+      nextPost,
     },
     revalidate: 60 * 60 * 24, // 24h = second * minute * hour
   };

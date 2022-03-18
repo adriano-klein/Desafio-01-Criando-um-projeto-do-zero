@@ -25,6 +25,7 @@
 
 .dateAndAuthor{
   max-width: 400px;
+  margin-bottom: 0.5rem;
   display: flex;
   justify-content: space-between;
   color: var(--info);
@@ -32,8 +33,13 @@
   svg{
     margin-right: 0.3rem
   }
-
 }
+
+.editedAt{
+  color: var(--info);
+  font-size: 0.8rem;
+}
+
 .contentBody {
   color: var(--body);
   margin-top: 5rem;
@@ -68,16 +74,16 @@
   .previousAndNext{
     display: flex;
     justify-content: space-between;
-    margin-top: 1rem;
+    margin-top: 3.75rem;
     border-top: 1px solid #ffffff;
 
-    button{
-      padding: 0.4rem;
-      border-radius: 0.3rem;
-      border: 1px solid #ffffff;
-      background-color: var(--background);
-      margin-top: 1rem;
-      margin-bottom: 2rem;
+    div {
+      margin-top: 2rem;
+      max-width: 45%;
+      }
+
+    .title{
+      margin-bottom: 1px;
     }
   }
 
