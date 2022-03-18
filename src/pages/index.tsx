@@ -77,7 +77,7 @@ export default function Home({ postsPagination, preview }: HomeProps) {
         <div className={styles.post}>
           {posts.map((post: Post) => {
             return (
-              <div key={post.uid}>
+              <div className={styles.onePost} key={post.uid}>
                 <Link key={post.uid} href={`/post/${String(post.uid)}`}>
                   <a>
                     <h1> {post.data.title} </h1>
@@ -134,7 +134,7 @@ export const getStaticProps: GetStaticProps<HomeProps> = async ({
     [Prismic.predicates.at('document.type', 'post')],
     {
       fetch: ['post.title', 'post.subtitle', 'post.author', 'post.content'],
-      pageSize: 2,
+      pageSize: 4,
       ref: previewData?.ref ?? null,
     }
   );

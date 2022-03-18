@@ -117,7 +117,7 @@ export default function Post({ post, prevPost, nextPost }: PostProps) {
           </div>
           <div className={styles.editedAt}>
             <p>
-              *Editado em
+              *Editado em &nbsp;
               {format(new Date(post.last_publication_date), 'd MMM yyy', {
                 locale: ptBR,
               })}
